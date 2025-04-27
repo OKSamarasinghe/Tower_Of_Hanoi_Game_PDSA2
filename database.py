@@ -4,52 +4,72 @@ import os.path
 class Database:
     def __init__(self):
         db_exists = os.path.exists("hanoi_game.db")
-        self.conn = sqlite3.connect("hanoi_game.db", check_same_thread=False)
-        self.conn.row_factory = sqlite3.Row
+        try:
+            self.conn = sqlite3.connect("hanoi_game.db", check_same_thread=False)
+            self.conn.row_factory = sqlite3.Row
 
-        if not db_exists:
-            self.create_tables()
-        else:
-            self.migrate_schema()
+            if not db_exists:
+                self.create_tables()
+                print("Database created successfully with all required tables")
+            else:
+                self.migrate_schema()
+        except Exception as e:
+            print(f"Database initialization error: {e}")
 
     def create_tables(self):
-        self.conn.execute('''
-            CREATE TABLE IF NOT EXISTS users (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL UNIQUE,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            )
-        ''')
+        try:
+            self.conn.execute('''
+                CREATE TABLE IF NOT EXISTS users (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    name TEXT NOT NULL UNIQUE,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            ''')
 
-        self.conn.execute('''
-            CREATE TABLE IF NOT EXISTS games (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                user_id INTEGER,
-                disks INTEGER NOT NULL,
-                pegs INTEGER NOT NULL,
-                completed BOOLEAN DEFAULT 0,
-                user_time INTEGER,
-                user_moves TEXT,
-                actual_moves TEXT,
-                is_correct BOOLEAN,
-                efficiency_note TEXT,
-                min_moves INTEGER,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                FOREIGN KEY (user_id) REFERENCES users(id)
-            )
-        ''')
+            self.conn.execute('''
+                CREATE TABLE IF NOT EXISTS games (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER,
+                    disks INTEGER NOT NULL,
+                    pegs INTEGER NOT NULL,
+                    completed BOOLEAN DEFAULT 0,
+                    user_time INTEGER,
+                    user_moves TEXT,
+                    actual_moves TEXT,
+                    is_correct BOOLEAN,
+                    efficiency_note TEXT,
+                    min_moves INTEGER,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (user_id) REFERENCES users(id)
+                )
+            ''')
 
-        self.conn.execute('''
-            CREATE TABLE IF NOT EXISTS algorithm_performance (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                game_id INTEGER NOT NULL,
-                algorithm_name TEXT NOT NULL,
-                execution_time REAL NOT NULL,
-                FOREIGN KEY (game_id) REFERENCES games(id)
-            )
-        ''')
+            self.conn.execute('''
+                CREATE TABLE IF NOT EXISTS algorithm_performance (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    game_id INTEGER NOT NULL,
+                    algorithm_name TEXT NOT NULL,
+                    execution_time REAL NOT NULL,
+                    FOREIGN KEY (game_id) REFERENCES games(id)
+                )
+            ''')
 
-        self.conn.commit()
+            # Make sure to commit the changes
+            self.conn.commit()
+            
+            # Verify the tables were created
+            cursor = self.conn.execute("SELECT name FROM sqlite_master WHERE type='table'")
+            tables = [row['name'] for row in cursor.fetchall()]
+            print(f"Created tables: {tables}")
+            
+            if 'games' not in tables or 'algorithm_performance' not in tables:
+                print("WARNING: Some tables may not have been created properly")
+                
+        except Exception as e:
+            print(f"Error creating tables: {e}")
+            # Roll back any partial changes
+            self.conn.rollback()
+            raise
 
     def migrate_schema(self):
         try:
