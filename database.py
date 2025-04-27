@@ -33,7 +33,7 @@ class Database:
                 actual_moves TEXT,
                 is_correct BOOLEAN,
                 efficiency_note TEXT,
-                min_moves INTEGER,  # Added column for minimum moves
+                min_moves INTEGER,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (user_id) REFERENCES users(id)
             )
